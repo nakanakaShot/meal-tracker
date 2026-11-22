@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
+import ClientWrapper from "../components/ClientWrapper";
 
 const geist = Geist({
   variable: "--font-geist",
@@ -27,7 +28,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
+      <link rel="manifest" href="/manifest.json" />
       <body className={`${geist.variable} font-sans antialiased bg-gray-50`}>
+        <ClientWrapper />
         {children}
       </body>
     </html>
