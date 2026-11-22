@@ -1,7 +1,13 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenAI, ThinkingConfig } from "@google/genai";
 
-const client = new Anthropic();
+function getAiClient(): GoogleGenAI {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is missing.");
+  }
+  return new GoogleGenAI({ apiKey });
+}
 
 const SYSTEM_PROMPT = `あなたは食事の栄養分析の専門家です。
 画像に写っている食事を分析し、以下のJSON形式のみで回答してください。余計なテキストは含めないでください。
@@ -52,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (!image || !mimeType) {
       return NextResponse.json(
         { error: "画像データが必要です" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -62,38 +68,29 @@ export async function POST(request: NextRequest) {
       | "image/gif"
       | "image/webp";
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-5-20250929",
-      max_tokens: 2048,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mediaType,
-                data: image,
-              },
-            },
-            {
-              type: "text",
-              text: "この食事の栄養素を分析してください。",
-            },
-          ],
+    const ai = getAiClient();
+
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+      contents: {
+        inlineData: {
+          mimeType: mediaType,
+          data: image,
         },
-      ],
-      system: SYSTEM_PROMPT,
+        text: "この食事の栄養素を分析してください。",
+      },
+      config: {
+        systemInstruction: SYSTEM_PROMPT,
+      },
     });
 
-    const textContent = response.content.find((c) => c.type === "text");
-    if (!textContent || textContent.type !== "text") {
-      throw new Error("レスポンスにテキストが含まれていません");
+    const textContent = response.text;
+    if (!textContent) {
+      throw new Error("Gemini returned empty response text.");
     }
 
     // Extract JSON from response (handle markdown code blocks)
-    let jsonStr = textContent.text.trim();
+    let jsonStr = textContent.trim();
     const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) {
       jsonStr = jsonMatch[1].trim();
@@ -106,13 +103,14 @@ export async function POST(request: NextRequest) {
       (food: Record<string, unknown>, index: number) => ({
         ...food,
         id: `food-${Date.now()}-${index}`,
-      })
+      }),
     );
 
     // Recalculate totals from foods array (don't trust AI's totalCalories)
     result.totalCalories = result.foods.reduce(
-      (sum: number, f: Record<string, unknown>) => sum + (Number(f.calories) || 0),
-      0
+      (sum: number, f: Record<string, unknown>) =>
+        sum + (Number(f.calories) || 0),
+      0,
     );
 
     return NextResponse.json(result);
@@ -121,9 +119,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          error instanceof Error ? error.message : "分析中にエラーが発生しました",
+          error instanceof Error
+            ? error.message
+            : "分析中にエラーが発生しました",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
