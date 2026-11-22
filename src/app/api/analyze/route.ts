@@ -72,13 +72,17 @@ export async function POST(request: NextRequest) {
 
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
-      contents: {
-        inlineData: {
-          mimeType: mediaType,
-          data: image,
+      contents: [
+        {
+          inlineData: {
+            mimeType: mediaType,
+            data: image,
+          },
         },
-        text: "この食事の栄養素を分析してください。",
-      },
+        {
+          text: "この食事の栄養素を分析してください。",
+        },
+      ],
       config: {
         systemInstruction: SYSTEM_PROMPT,
       },
