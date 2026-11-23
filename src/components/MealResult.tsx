@@ -214,14 +214,14 @@ export default function MealResult({ result, onSave, onCancel }: MealResultProps
       <div className="flex gap-3">
         <button
           onClick={onCancel}
-          className="flex-1 py-3 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50"
+          className="flex-1 pb-6 py-3 rounded-xl border border-gray-300 text-gray-600 font-medium hover:bg-gray-50"
         >
           キャンセル
         </button>
         <button
           onClick={() => onSave(foods, mealType)}
           disabled={foods.length === 0}
-          className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 pb-6 py-3 rounded-xl bg-emerald-500 text-white font-medium hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           記録する
         </button>
